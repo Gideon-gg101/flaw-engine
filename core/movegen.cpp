@@ -8,7 +8,8 @@ std::vector<Move> generateLegalMoves(const Board &b) {
     copy.makeMove(m);
     // Warning: simplified check test (always checks square 0 for attacks)
     // This is from user snippet, preserving as requested.
-    bool inCheck = copy.isSquareAttacked(0, (Color)!b.sideToMove);
+    bool inCheck =
+        copy.isSquareAttacked(0, (b.sideToMove == WHITE ? BLACK : WHITE));
     if (!inCheck)
       legal.push_back(m);
   }

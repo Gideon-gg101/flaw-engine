@@ -32,7 +32,7 @@ Board::Board() {
   enPassant = -1;
 }
 void Board::clear() {
-  for (int i = 0; i < 12; ++i)
+  for (int i = 0; i < 13; ++i)
     bitboards[i] = 0ULL;
 }
 static int squareIndex(int rank, int file) { return rank * 8 + file; }

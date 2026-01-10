@@ -23,7 +23,7 @@ public:
   uint64_t hash() const { return zobristKey; }
   void recalculateHash();
 
-  uint64_t bitboards[12];
+  uint64_t bitboards[13];
   Color sideToMove;
   uint8_t castlingRights;
   int enPassant;

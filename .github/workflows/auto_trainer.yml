@@ -1,0 +1,59 @@
+name: Flaw Cloud Auto-Trainer ♟️
+
+on:
+  workflow_dispatch:
+    inputs:
+      master_url:
+        description: 'Your local ngrok MASTER_URL'
+        required: true
+        default: 'https://PASTE_YOUR_NGROK_URL_HERE.ngrok-free.dev'
+      worker_count:
+        description: 'Number of parallel workers (1-20)'
+        required: true
+        default: '5'
+      duration_minutes:
+        description: 'How long to run (minutes)'
+        required: true
+        default: '30'
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # This creates the number of workers you requested
+        worker_id: [1, 2, 3, 4, 5] 
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++
+
+      - name: Install Python Dependencies
+        run: |
+          pip install requests torch
+
+      - name: Build C++ Core
+        run: |
+          mkdir -p core/build
+          cd core/build
+          cmake ..
+          make -j$(nproc)
+          cp flaw_core*.so ../../
+          cp flaw_core*.so ../../ai/
+
+      - name: Run Worker
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Run for the specified duration and then exit
+          timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master ${{ github.event.inputs.master_url }} || true

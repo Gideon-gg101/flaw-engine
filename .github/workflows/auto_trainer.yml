@@ -26,12 +26,12 @@ jobs:
     
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: false
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -62,7 +62,7 @@ jobs:
           timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
 
       - name: Upload Training Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: training-data-${{ matrix.worker_id }}

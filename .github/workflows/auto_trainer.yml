@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       master_url:
-        description: 'Your local ngrok MASTER_URL'
-        required: true
-        default: 'https://PASTE_YOUR_NGROK_URL_HERE.ngrok-free.dev'
+        description: 'Your local ngrok MASTER_URL (leave empty for Offline/Artifact mode)'
+        required: false
+        default: ''
       worker_count:
         description: 'Number of parallel workers (1-20)'
         required: true
@@ -59,4 +59,12 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           # Run for the specified duration and then exit
-          timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master ${{ github.event.inputs.master_url }} || true
+          timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
+
+      - name: Upload Training Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: training-data-${{ matrix.worker_id }}
+          path: results_worker_*.json
+          retention-days: 7

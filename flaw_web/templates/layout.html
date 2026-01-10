@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Flaw Engine GUI</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <!-- Using CDNs as requested -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+</head>
+<body>
+  <h1>Flaw Engine Web Interface</h1>
+  <div id="board" style="width: 450px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden;"></div>
+  <div id="status">Ready to Play</div>
+  <div class="controls">
+      <button id="resetBtn">Reset Game</button>
+      <a href="/leaderboard" class="btn-link">View Leaderboard</a>
+  </div>
+  
+  <script>
+    const game = new Chess();
+    const board = Chessboard('board', {
+      draggable: true,
+      position: 'start',
+      pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+      onDragStart: onDragStart,
+      onDrop: onDrop,
+      onSnapEnd: onSnapEnd
+    });
+
+    function onDragStart (source, piece, position, orientation) {
+      if (game.game_over()) return false
+      // only pick up pieces for the side to move
+      if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+          (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+        return false
+      }
+    }
+
+    async function onDrop(source, target) {
+      const move = game.move({from: source, to: target, promotion: 'q'});
+      if (!move) return 'snapback';
+      
+      updateStatus("Thinking...");
+      
+      // Send move to engine
+      await fetch("/move", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({move: source + target})
+      });
+      
+      // Get best move
+      const res = await fetch("/bestmove");
+      const data = await res.json();
+      
+      if (data.bestmove) {
+        const from = data.bestmove.slice(0,2);
+        const to = data.bestmove.slice(2,4);
+        game.move({from: from, to: to, promotion: 'q'});
+        board.position(game.fen());
+        updateStatus("Flaw played: " + from + to + " (Eval: " + data.score + ")");
+      } else {
+        updateStatus("Game Over or No Move found");
+      }
+    }
+    
+    function onSnapEnd () {
+      board.position(game.fen())
+    }
+    
+    function updateStatus(text) {
+        document.getElementById("status").innerText = text;
+    }
+
+    document.getElementById("resetBtn").onclick = async () => {
+      await fetch("/reset", {method: "POST"});
+      game.reset();
+      board.start();
+      updateStatus("Game Reset");
+    };
+  </script>
+</body>
+</html>

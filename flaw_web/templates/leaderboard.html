@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Flaw Leaderboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white font-sans">
+  <div class="p-8 max-w-4xl mx-auto">
+    <div class="text-center mb-10">
+        <h1 class="text-5xl font-extrabold text-blue-500 mb-2">🏆 Flaw Leaderboard</h1>
+        <p class="text-gray-400">Adaptive Chess Engine Tournament Rankings</p>
+    </div>
+    
+    <div class="bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-700">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="bg-gray-700 text-blue-300 uppercase text-sm tracking-wider">
+              <th class="px-6 py-4">Rank</th>
+              <th class="px-6 py-4">Player</th>
+              <th class="px-6 py-4">Elo Rating</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700">
+            {% for name, rating in leaders %}
+            <tr class="hover:bg-gray-750 transition-colors">
+              <td class="px-6 py-4 font-mono text-gray-400">#{{ loop.index }}</td>
+              <td class="px-6 py-4 font-semibold text-lg">{{ name }}</td>
+              <td class="px-6 py-4">
+                  <span class="bg-blue-900 text-blue-200 px-3 py-1 rounded-full text-sm font-bold">
+                    {{ rating|round(0)|int }}
+                  </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-8 text-center">
+        <a href="/" class="text-blue-400 hover:text-blue-300 underline">Back to Play</a>
+    </div>
+  </div>
+</body>
+</html>

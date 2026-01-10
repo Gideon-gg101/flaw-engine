@@ -1,0 +1,52 @@
+[
+  {
+    "white": "Grandmaster",
+    "black": "Alice",
+    "score": 0.0
+  },
+  {
+    "white": "Grandmaster",
+    "black": "Bob",
+    "score": 0.0
+  },
+  {
+    "white": "Grandmaster",
+    "black": "Charlie",
+    "score": 0.0
+  },
+  {
+    "white": "Grandmaster",
+    "black": "Flaw-v1",
+    "score": 1.0
+  },
+  {
+    "white": "Alice",
+    "black": "Bob",
+    "score": 1.0
+  },
+  {
+    "white": "Alice",
+    "black": "Charlie",
+    "score": 1.0
+  },
+  {
+    "white": "Alice",
+    "black": "Flaw-v1",
+    "score": 1.0
+  },
+  {
+    "white": "Bob",
+    "black": "Charlie",
+    "score": 0.0
+  },
+  {
+    "white": "Bob",
+    "black": "Flaw-v1",
+    "score": 1.0
+  },
+  {
+    "white": "Charlie",
+    "black": "Flaw-v1",
+    "score": 1.0
+  }
+]

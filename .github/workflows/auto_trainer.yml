@@ -44,6 +44,7 @@ jobs:
 
       - name: Build C++ Core
         run: |
+          rm -rf core/build
           mkdir -p core/build
           cd core/build
           cmake ..

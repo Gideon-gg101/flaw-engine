@@ -1,0 +1,23 @@
+# Build artifacts
+core/build/
+**/build/
+*.so
+*.pyd
+*.dll
+*.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Logs and results
+logs/distributed_results.json
+
+# IDEs
+.vscode/
+.idea/

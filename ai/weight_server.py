@@ -25,32 +25,43 @@ def get_weights():
 @app.route("/report_result", methods=["POST"])
 def report_result():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data"}), 400
+        
     result = data.get("result") # 1.0 (win), 0.5 (draw), 0.0 (loss)
+    if result is None:
+        return jsonify({"error": "No result field"}), 400
     
     with update_lock:
         # Update weights based on remote result
         if os.path.exists(WEIGHTS_PATH):
-            with open(WEIGHTS_PATH, "r") as f:
-                weights = json.load(f)
-            
-            # Simple learning rule (same as selfplay_trainer but from remote)
-            if result > 0.8:
-                weights["attack"] *= 1.001
-            elif result < 0.2:
-                weights["defense"] *= 1.001
-            
-            with open(WEIGHTS_PATH, "w") as f:
-                json.dump(weights, f, indent=2)
+            try:
+                with open(WEIGHTS_PATH, "r") as f:
+                    weights = json.load(f)
+                
+                # Simple learning rule (same as selfplay_trainer but from remote)
+                if result > 0.8:
+                    weights["attack"] *= 1.001
+                elif result < 0.2:
+                    weights["defense"] *= 1.001
+                
+                with open(WEIGHTS_PATH, "w") as f:
+                    json.dump(weights, f, indent=2)
+            except Exception as e:
+                print(f"Error updating weights: {e}")
                 
         # Log to results
         results = []
-        if os.path.exists(RESULTS_PATH):
-            with open(RESULTS_PATH, "r") as f:
-                results = json.load(f)
-        
-        results.append(data)
-        with open(RESULTS_PATH, "w") as f:
-            json.dump(results, f, indent=2)
+        try:
+            if os.path.exists(RESULTS_PATH):
+                with open(RESULTS_PATH, "r") as f:
+                    results = json.load(f)
+            
+            results.append(data)
+            with open(RESULTS_PATH, "w") as f:
+                json.dump(results, f, indent=2)
+        except Exception as e:
+            print(f"Error logging result: {e}")
 
     return jsonify({"status": "ok"})
 

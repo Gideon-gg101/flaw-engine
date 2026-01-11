@@ -21,14 +21,23 @@ class MCTSWorker:
         if not self.master_url:
             return False
         try:
-            res = requests.get(f"{self.master_url}/get_mcts_weights", timeout=10)
+            print(f"DEBUG: Connecting to {self.master_url}/get_mcts_weights", flush=True)
+            # Add header to bypass ngrok browser warning page
+            headers = {"ngrok-skip-browser-warning": "true"}
+            res = requests.get(f"{self.master_url}/get_mcts_weights", headers=headers, timeout=15)
+            
+            print(f"DEBUG: Response status {res.status_code}", flush=True)
             if res.status_code == 200:
                 with open("temp_weights.json", "w") as f:
                     f.write(res.text)
                 self.net.load("temp_weights.json")
                 return True
+            else:
+                print(f"Server returned status {res.status_code}: {res.text[:100]}", flush=True)
+        except requests.exceptions.Timeout:
+            print("Request timed out after 15s!", flush=True)
         except Exception as e:
-            print(f"Failed to fetch MCTS weights: {e}")
+            print(f"Failed to fetch MCTS weights (Exception): {e}", flush=True)
         return False
 
     def run_game(self):

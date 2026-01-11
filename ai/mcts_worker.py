@@ -75,13 +75,16 @@ class MCTSWorker:
 
     def run(self, duration_mins=10):
         start_time = time.time()
-        print(f"Worker {self.worker_id} starting for {duration_mins} minutes...")
+        print(f"Worker {self.worker_id} starting for {duration_mins} minutes...", flush=True)
         
         while (time.time() - start_time) < (duration_mins * 60):
+            print("Fetching weights...", flush=True)
             self.fetch_weights()
+            print("Weights fetched (or skipped). Starting game...", flush=True)
             triplets = self.run_game()
+            print(f"Game finished with {len(triplets)} positions. Reporting...", flush=True)
             self.report_data(triplets)
-            print(f"Time left: {int((duration_mins * 60 - (time.time() - start_time)) / 60)} mins")
+            print(f"Time left: {int((duration_mins * 60 - (time.time() - start_time)) / 60)} mins", flush=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

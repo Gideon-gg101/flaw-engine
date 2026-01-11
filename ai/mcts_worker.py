@@ -5,8 +5,8 @@ import random
 import argparse
 import numpy as np
 import chess
-from .mcts import MCTSGame, mcts_search
-from .neural_core import TinyAlphaZero
+from ai.mcts import MCTSGame, mcts_search
+from ai.neural_core import TinyAlphaZero
 
 class MCTSWorker:
     def __init__(self, master_url, sims=25):

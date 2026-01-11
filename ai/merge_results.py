@@ -45,12 +45,12 @@ def merge_results(results_dir):
                 res = entry.get("result", 0.5)
                 total_games += 1
                 
-                # Simple learning rule (mirrors weight_server logic)
+                # Stable linear learning rule
                 if res > 0.8:
-                    weights["attack"] *= 1.001
+                    weights["attack"] += 0.001
                     wins += 1
                 elif res < 0.2:
-                    weights["defense"] *= 1.001
+                    weights["defense"] += 0.001
                     losses += 1
         except Exception as e:
             print(f"❌ Error reading {json_file}: {e}")

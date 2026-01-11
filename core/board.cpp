@@ -101,32 +101,83 @@ Piece Board::pieceAt(int square) const {
 }
 void Board::makeMove(const Move &m) {
   Piece moving = pieceAt(m.from);
-  Piece captured = EMPTY;
-  // Identify captured piece
-  for (int p = 1; p <= 12; ++p) { // 1 to 12 (WP=1 .. BK=12) assuming EMPTY=0
-    if (bitboards[p] & (1ULL << m.to)) {
-      captured = static_cast<Piece>(p);
-      break;
+  Piece target = pieceAt(m.to);
+
+  // 1. Handle En Passant Capture
+  if ((moving == WP || moving == BP) && m.to == enPassant) {
+    int capSq = (moving == WP) ? m.to - 8 : m.to + 8;
+    Piece capPawn = pieceAt(capSq);
+    zobristKey ^= zobristTable[capPawn][capSq];
+    bitboards[capPawn] &= ~(1ULL << capSq);
+  }
+
+  // 2. Clear target square (Standard capture)
+  if (target != EMPTY) {
+    zobristKey ^= zobristTable[target][m.to];
+    bitboards[target] &= ~(1ULL << m.to);
+  }
+
+  // 3. Handle Castling (Move the Rook)
+  if (moving == WK && std::abs(m.to - m.from) == 2) {
+    if (m.to == 6) { // White King Side
+      bitboards[WR] &= ~(1ULL << 7);
+      bitboards[WR] |= (1ULL << 5);
+      zobristKey ^= zobristTable[WR][7] ^ zobristTable[WR][5];
+    } else if (m.to == 2) { // White Queen Side
+      bitboards[WR] &= ~(1ULL << 0);
+      bitboards[WR] |= (1ULL << 3);
+      zobristKey ^= zobristTable[WR][0] ^ zobristTable[WR][3];
+    }
+  } else if (moving == BK && std::abs(m.to - m.from) == 2) {
+    if (m.to == 62) { // Black King Side
+      bitboards[BR] &= ~(1ULL << 63);
+      bitboards[BR] |= (1ULL << 61);
+      zobristKey ^= zobristTable[BR][63] ^ zobristTable[BR][61];
+    } else if (m.to == 58) { // Black Queen Side
+      bitboards[BR] &= ~(1ULL << 56);
+      bitboards[BR] |= (1ULL << 59);
+      zobristKey ^= zobristTable[BR][56] ^ zobristTable[BR][59];
     }
   }
 
-  // Hash update: remove moving and captured
+  // 4. Update Bitboards and Hash for moving piece
   zobristKey ^= zobristTable[moving][m.from];
-  if (captured != EMPTY)
-    zobristKey ^= zobristTable[captured][m.to];
-
-  // Bitboard updates
-  for (int i = 0; i < 12; ++i)
-    bitboards[i] &= ~(1ULL << m.to);
   bitboards[moving] &= ~(1ULL << m.from);
-  bitboards[moving] |= (1ULL << m.to);
 
-  // Hash update: add moving at new square
-  zobristKey ^= zobristTable[moving][m.to];
+  if (m.promotion != EMPTY) {
+    bitboards[m.promotion] |= (1ULL << m.to);
+    zobristKey ^= zobristTable[m.promotion][m.to];
+  } else {
+    bitboards[moving] |= (1ULL << m.to);
+    zobristKey ^= zobristTable[moving][m.to];
+  }
 
-  // Side update
+  // 5. Update Status: En Passant Square
+  enPassant = -1;
+  if (moving == WP && (m.to - m.from == 16))
+    enPassant = m.from + 8;
+  if (moving == BP && (m.from - m.to == 16))
+    enPassant = m.from - 8;
+
+  // 6. Update Status: Castling Rights
+  if (moving == WK)
+    castlingRights &= ~3;
+  if (moving == BK)
+    castlingRights &= ~12;
+  if (m.from == 0 || m.to == 0)
+    castlingRights &= ~2; // White Queen Rook
+  if (m.from == 7 || m.to == 7)
+    castlingRights &= ~1; // White King Rook
+  if (m.from == 56 || m.to == 56)
+    castlingRights &= ~8; // Black Queen Rook
+  if (m.from == 63 || m.to == 63)
+    castlingRights &= ~4; // Black King Rook
+
+  // 7. Side and Key update
   sideToMove = (sideToMove == WHITE) ? BLACK : WHITE;
   zobristKey ^= sideKey;
+  // Note: castling and ep hashes should ideally be toggled but omitted for
+  // simplicity in this proto scope
 }
 
 std::string Board::toFEN() const {
@@ -184,43 +235,207 @@ int Board::getResult() const {
   return 0; // Stalemate
 }
 bool Board::isSquareAttacked(int square, Color by) const {
-  // simplified attack detection (knights + pawns)
-  static const int knightOffsets[8] = {17, 15, 10, 6, -17, -15, -10, -6};
-  for (int o : knightOffsets) {
-    int sq = square + o;
-    if (sq < 0 || sq > 63)
-      continue;
-    Piece attacker = (by == WHITE) ? WN : BN;
-    if (bitboards[attacker] & (1ULL << sq))
-      return true;
+  Color us = (by == WHITE) ? BLACK : WHITE;
+
+  // Directions
+  static const int knightDirs[8] = {17, 15, 10, 6, -17, -15, -10, -6};
+  static const int rookDirs[4] = {8, -8, 1, -1};
+  static const int bishopDirs[4] = {9, 7, -9, -7};
+  static const int queenDirs[8] = {8, -8, 1, -1, 9, 7, -9, -7};
+
+  // 1. Knights
+  for (int d : knightDirs) {
+    int to = square + d;
+    if (to >= 0 && to < 64 && std::abs((to % 8) - (square % 8)) <= 2) {
+      Piece p = (by == WHITE) ? WN : BN;
+      if (bitboards[p] & (1ULL << to))
+        return true;
+    }
   }
-  // basic pawn attack check
-  int dir = (by == WHITE) ? -8 : 8;
-  int left = (square + dir - 1), right = (square + dir + 1);
-  Piece pawn = (by == WHITE) ? WP : BP;
-  if (left >= 0 && left < 64 && (bitboards[pawn] & (1ULL << left)))
+
+  // 2. Pawns
+  int pawnDir = (by == WHITE) ? -8 : 8;
+  for (int side : {-1, 1}) {
+    int to = square + pawnDir + side;
+    if (to >= 0 && to < 64 && std::abs((to % 8) - (square % 8)) == 1) {
+      Piece p = (by == WHITE) ? WP : BP;
+      if (bitboards[p] & (1ULL << to))
+        return true;
+    }
+  }
+
+  // 3. King
+  for (int d : queenDirs) {
+    int to = square + d;
+    if (to >= 0 && to < 64 && std::abs((to % 8) - (square % 8)) <= 1) {
+      Piece p = (by == WHITE) ? WK : BK;
+      if (bitboards[p] & (1ULL << to))
+        return true;
+    }
+  }
+
+  // 4. Sliders (Rooks, Bishops, Queens)
+  auto checkSlider = [&](const int *dirs, int numDirs, Piece p1, Piece p2) {
+    for (int i = 0; i < numDirs; ++i) {
+      int to = square;
+      while (true) {
+        int nextTo = to + dirs[i];
+        if (nextTo < 0 || nextTo >= 64)
+          break;
+        if (std::abs((nextTo % 8) - (to % 8)) > 2)
+          break; // Wrapped board
+
+        Piece found = pieceAt(nextTo);
+        if (found != EMPTY) {
+          if (found == p1 || found == p2)
+            return true;
+          break; // Blocked
+        }
+        to = nextTo;
+      }
+    }
+    return false;
+  };
+
+  if (checkSlider(rookDirs, 4, (by == WHITE ? WR : BR),
+                  (by == WHITE ? WQ : BQ)))
     return true;
-  if (right >= 0 && right < 64 && (bitboards[pawn] & (1ULL << right)))
+  if (checkSlider(bishopDirs, 4, (by == WHITE ? WB : BB),
+                  (by == WHITE ? WQ : BQ)))
     return true;
+
   return false;
 }
 std::vector<Move> Board::getPseudoLegalMoves() const {
   std::vector<Move> moves;
-  uint64_t bb = (sideToMove == WHITE) ? bitboards[WP] : bitboards[BP];
-  int dir = (sideToMove == WHITE) ? 8 : -8;
-  while (bb) {
-// Basic builtin wrapper or fallback
+  Color us = sideToMove;
+  Color them = (us == WHITE) ? BLACK : WHITE;
+
+  // Directions for sliding pieces
+  static const int rookDirs[4] = {8, -8, 1, -1};
+  static const int bishopDirs[4] = {9, 7, -9, -7};
+  static const int queenDirs[8] = {8, -8, 1, -1, 9, 7, -9, -7};
+  static const int knightDirs[8] = {17, 15, 10, 6, -17, -15, -10, -6};
+
+  for (int p_val = WP; p_val <= BK; ++p_val) {
+    Piece p = static_cast<Piece>(p_val);
+    bool isWhitePiece = (p >= WP && p <= WK);
+    if ((us == WHITE && !isWhitePiece) || (us == BLACK && isWhitePiece))
+      continue;
+
+    uint64_t bb = bitboards[p];
+    while (bb) {
+      int from = 0;
 #if defined(_MSC_VER) && !defined(__clang__)
-    unsigned long index;
-    _BitScanForward64(&index, bb);
-    int from = index;
+      unsigned long index;
+      _BitScanForward64(&index, bb);
+      from = index;
 #else
-    int from = __builtin_ctzll(bb);
+      from = __builtin_ctzll(bb);
 #endif
-    int to = from + dir;
-    if (to >= 0 && to < 64)
-      moves.push_back(Move(from, to));
-    bb &= bb - 1;
+      bb &= bb - 1;
+
+      // Piece Specific Logic
+      if (p == WP || p == BP) {
+        int dir = (p == WP) ? 8 : -8;
+        int to = from + dir;
+        int promRank = (p == WP) ? 7 : 0;
+
+        if (to >= 0 && to < 64 && pieceAt(to) == EMPTY) {
+          if ((to / 8) == promRank) {
+            // Promotion moves (Q, R, B, N)
+            Piece promPieces[4] = {(p == WP ? WQ : BQ), (p == WP ? WR : BR),
+                                   (p == WP ? WB : BB), (p == WP ? WN : BN)};
+            for (Piece prom : promPieces)
+              moves.push_back(Move(from, to, prom));
+          } else {
+            moves.push_back(Move(from, to));
+          }
+
+          // Double push (not from promotion rank)
+          if ((from / 8) != promRank) {
+            int startRank = (p == WP) ? 1 : 6;
+            if ((from / 8) == startRank) {
+              int toMid = from + dir;
+              int to2 = from + 2 * dir;
+              if (pieceAt(toMid) == EMPTY && pieceAt(to2) == EMPTY)
+                moves.push_back(Move(from, to2));
+            }
+          }
+        }
+        // Captures
+        for (int c_side : {-1, 1}) {
+          int to_c = from + dir + c_side;
+          if (to_c >= 0 && to_c < 64 &&
+              std::abs((to_c % 8) - (from % 8)) == 1) {
+            Piece target = pieceAt(to_c);
+            if (target != EMPTY && ((us == WHITE && target >= BP) ||
+                                    (us == BLACK && target <= WK))) {
+              if ((to_c / 8) == promRank) {
+                // Promotion captures
+                Piece promPieces[4] = {(p == WP ? WQ : BQ), (p == WP ? WR : BR),
+                                       (p == WP ? WB : BB),
+                                       (p == WP ? WN : BN)};
+                for (Piece prom : promPieces)
+                  moves.push_back(Move(from, to_c, prom));
+              } else {
+                moves.push_back(Move(from, to_c));
+              }
+            }
+          }
+        }
+      } else if (p == WN || p == BN) {
+        for (int d : knightDirs) {
+          int to = from + d;
+          if (to >= 0 && to < 64) {
+            int fileDist = std::abs((to % 8) - (from % 8));
+            if (fileDist <= 2) {
+              Piece target = pieceAt(to);
+              if (target == EMPTY || ((us == WHITE && target >= BP) ||
+                                      (us == BLACK && target <= WK)))
+                moves.push_back(Move(from, to));
+            }
+          }
+        }
+      } else if (p == WK || p == BK) {
+        for (int d : queenDirs) {
+          int to = from + d;
+          if (to >= 0 && to < 64 && std::abs((to % 8) - (from % 8)) <= 1) {
+            Piece target = pieceAt(to);
+            if (target == EMPTY || ((us == WHITE && target >= BP) ||
+                                    (us == BLACK && target <= WK)))
+              moves.push_back(Move(from, to));
+          }
+        }
+      } else {
+        // Sliders
+        const int *dirs = (p == WR || p == BR)
+                              ? rookDirs
+                              : (p == WB || p == BB ? bishopDirs : queenDirs);
+        int numDirs = (p == WQ || p == BQ) ? 8 : 4;
+        for (int i = 0; i < numDirs; ++i) {
+          int to = from;
+          while (true) {
+            int nextTo = to + dirs[i];
+            if (nextTo < 0 || nextTo >= 64)
+              break;
+            if (std::abs((nextTo % 8) - (to % 8)) > 2)
+              break; // Wrapped board
+
+            Piece target = pieceAt(nextTo);
+            if (target == EMPTY) {
+              moves.push_back(Move(from, nextTo));
+              to = nextTo;
+            } else {
+              if ((us == WHITE && target >= BP) ||
+                  (us == BLACK && target <= WK))
+                moves.push_back(Move(from, nextTo));
+              break;
+            }
+          }
+        }
+      }
+    }
   }
   return moves;
 }

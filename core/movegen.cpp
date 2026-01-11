@@ -6,10 +6,23 @@ std::vector<Move> generateLegalMoves(const Board &b) {
   for (auto &m : pseudo) {
     Board copy = b;
     copy.makeMove(m);
-    // Warning: simplified check test (always checks square 0 for attacks)
-    // This is from user snippet, preserving as requested.
+    // Find king square
+    int kingSq = -1;
+    Piece k = (b.sideToMove == WHITE) ? WK : BK;
+    uint64_t bb = copy.bitboards[k];
+    if (bb) {
+#if defined(_MSC_VER) && !defined(__clang__)
+      unsigned long index;
+      _BitScanForward64(&index, bb);
+      kingSq = index;
+#else
+      kingSq = __builtin_ctzll(bb);
+#endif
+    }
+
     bool inCheck =
-        copy.isSquareAttacked(0, (b.sideToMove == WHITE ? BLACK : WHITE));
+        (kingSq != -1) &&
+        copy.isSquareAttacked(kingSq, (b.sideToMove == WHITE ? BLACK : WHITE));
     if (!inCheck)
       legal.push_back(m);
   }

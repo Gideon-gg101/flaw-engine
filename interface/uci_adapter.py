@@ -55,51 +55,35 @@ class UCIAdapter:
 
     def handle_position(self, cmd):
         parts = cmd.split()
-        # Default startpos
         if "startpos" in cmd:
             fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             self.engine.load_fen(fen)
-            # Check if moves follow startpos
             if "moves" in parts:
-                move_index = parts.index("moves") + 1
-                self.apply_moves(parts[move_index:])
+                move_idx = parts.index("moves") + 1
+                self.apply_moves(parts[move_idx:])
         elif "fen" in parts:
-            fen_index = parts.index("fen")
-            # FEN has 6 parts usually, but safe slicing till "moves" or end
-            if "moves" in parts:
-                moves_index = parts.index("moves")
-                fen = " ".join(parts[fen_index+1:moves_index])
-                self.apply_moves(parts[moves_index+1:])
-            else:
-                fen = " ".join(parts[fen_index+1:])
+            moves_idx = parts.index("moves") if "moves" in parts else len(parts)
+            fen_idx = parts.index("fen") + 1
+            fen = " ".join(parts[fen_idx:moves_idx])
             self.engine.load_fen(fen)
+            if "moves" in parts:
+                self.apply_moves(parts[moves_idx+1:])
             
     def apply_moves(self, moves):
-        for m in moves:
-            # Parse UCI long algebraic: e2e4 or e7e8q
-            file_from = ord(m[0]) - 97
-            rank_from = int(m[1]) - 1
-            file_to = ord(m[2]) - 97
-            rank_to = int(m[3]) - 1
-            
-            f = rank_from * 8 + file_from
-            t = rank_to * 8 + file_to
-            
-            # Promotion handling?
-            # User Move struct uses Piece enum for promotion.
-            # Simplified engine just puts Piece.EMPTY usually for simple moves
-            # If length is 5, character 5 is promotion piece
-            prom = fc.Piece.EMPTY
-            if len(m) == 5:
-                p_char = m[4]
-                # Mapping char to Piece?
-                # For now assume Queen for simplicity or ignore as engine might not handle it fully logic-wise yet
-                # Or map: q->WQ/BQ based on side to move? 
-                # Engine core binding doesn't expose parsing logic easily here.
-                # Assuming standard queen promotion for now if strictly required by core validation
-                pass 
-            
-            self.engine.board.make_move(fc.Move(f, t, prom))
+        for m_str in moves:
+            legal = self.engine.board.generate_moves()
+            found = False
+            for m in legal:
+                if self.move_to_uci(m) == m_str:
+                    self.engine.board.make_move(m)
+                    found = True
+                    break
+            if not found:
+                # Fallback for unexpected moves (should not happen if legal list is correct)
+                # But helps debug protocol issues
+                f_sq = (ord(m_str[0]) - 97) + (int(m_str[1]) - 1) * 8
+                t_sq = (ord(m_str[2]) - 97) + (int(m_str[3]) - 1) * 8
+                self.engine.board.make_move(fc.Move(f_sq, t_sq, fc.Piece.EMPTY))
 
     def handle_go(self):
         self.game_active = True
@@ -152,10 +136,13 @@ class UCIAdapter:
         from_str = chr(f_file + 97) + str(f_rank + 1)
         to_str = chr(t_file + 97) + str(t_rank + 1)
         
-        # promotion? move.promotion is Piece enum
-        # If not EMPTY, append char. Implementation of Piece->char needed?
-        # Skipping for now as minimal
-        return from_str + to_str
+        prom_str = ""
+        if move.promotion != fc.Piece.EMPTY:
+            p_map = {fc.Piece.WQ: "q", fc.Piece.WR: "r", fc.Piece.WB: "b", fc.Piece.WN: "n",
+                     fc.Piece.BQ: "q", fc.Piece.BR: "r", fc.Piece.BB: "b", fc.Piece.BN: "n"}
+            prom_str = p_map.get(move.promotion, "")
+            
+        return from_str + to_str + prom_str
 
 
 if __name__ == "__main__":

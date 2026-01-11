@@ -11,10 +11,14 @@ on:
         description: 'Number of parallel workers (1-20)'
         required: true
         default: '5'
+      worker_type:
+        description: 'Type of worker (minimax, mcts)'
+        required: true
+        default: 'mcts'
       duration_minutes:
         description: 'How long to run (minutes)'
         required: true
-        default: '30'
+        default: '10'
 
 jobs:
   train:
@@ -42,7 +46,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install requests torch
+          pip install requests torch python-chess numpy
 
       - name: Build C++ Core
         run: |
@@ -58,8 +62,11 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          # Run for the specified duration and then exit
-          timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
+          if [ "${{ github.event.inputs.worker_type }}" == "mcts" ]; then
+            timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.mcts_worker --master "${{ github.event.inputs.master_url }}" --duration ${{ github.event.inputs.duration_minutes }} || true
+          else
+            timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
+          fi
 
       - name: Upload Training Results
         uses: actions/upload-artifact@v4

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 
-
 using namespace DIS;
 
 TranspositionTable tt;
@@ -29,14 +28,37 @@ int DIS::search(Board &b, int depth, int alpha, int beta, IntentContext ctx) {
     return entry.score;
 
   if (depth == 0)
-    return Evaluator::evaluate(b);
+    return Evaluator::evaluate(b, ctx);
   std::vector<Move> moves = MoveGen::generateLegalMoves(b);
   if (moves.empty())
-    return Evaluator::evaluate(b);
+    return Evaluator::evaluate(b, ctx);
 
-  // Intent-weighted move sorting (rough heuristic)
+  // MVV-LVA Move Ordering
   std::sort(moves.begin(), moves.end(), [&](const Move &a, const Move &b2) {
-    return (a.to % 8 + ctx.attack * 2) > (b2.to % 8 + ctx.defense);
+    Piece victimA = b.pieceAt(a.to);
+    Piece victimB = b.pieceAt(b2.to);
+    Piece attackerA = b.pieceAt(a.from);
+    Piece attackerB = b.pieceAt(b2.from);
+
+    // Simple material values for sorting
+    static const int mvvValue[13] = {0,  10, 20, 20, 40, 80, 100,
+                                     10, 20, 20, 40, 80, 100};
+
+    int scoreA = 0;
+    if (victimA != EMPTY)
+      scoreA = (mvvValue[victimA] * 10) - (mvvValue[attackerA] / 10);
+
+    int scoreB = 0;
+    if (victimB != EMPTY)
+      scoreB = (mvvValue[victimB] * 10) - (mvvValue[attackerB] / 10);
+
+    // Context weight influence
+    if (attackerA == WK || attackerA == BK)
+      scoreA -= ctx.risk * 10;
+    if (attackerB == WK || attackerB == BK)
+      scoreB -= ctx.risk * 10;
+
+    return scoreA > scoreB;
   });
 
   for (auto &m : moves) {

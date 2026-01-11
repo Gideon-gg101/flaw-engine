@@ -8,14 +8,41 @@ static const int pieceValue[13] = {0,    100,  320,  330,  500,  900,   20000,
 // Array indices: 0..12.
 // pieceValue[EMPTY] = 0. pieceValue[WP] = 100. Looks correct.
 
-int Evaluator::evaluate(const Board &b) {
+int Evaluator::evaluate(const Board &b, const IntentContext &ctx) {
   int score = 0;
+
+  // Use intent weights to scale material value
+  // own_weight = ctx.defense roughly
+  // enemy_weight = ctx.attack roughly
+
   for (int p = WP; p <= BK; ++p) {
     uint64_t bb = b.bitboards[p];
+    int count = 0;
     while (bb) {
       bb &= bb - 1;
-      score += pieceValue[p];
+      count++;
+    }
+
+    int val = pieceValue[p];
+
+    // Scale based on intent
+    if (b.sideToMove == WHITE) {
+      if (p >= WP && p <= WK) {
+        // Own pieces
+        score += val * ctx.defense;
+      } else {
+        // Enemy pieces
+        score += val * ctx.attack;
+      }
+    } else {
+      if (p >= BP && p <= BK) {
+        // Own pieces
+        score += val * ctx.defense;
+      } else {
+        // Enemy pieces
+        score += val * ctx.attack;
+      }
     }
   }
-  return (b.sideToMove == WHITE) ? score : -score;
+  return score;
 }

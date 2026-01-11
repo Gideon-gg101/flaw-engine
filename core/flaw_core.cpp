@@ -35,7 +35,8 @@ PYBIND11_MODULE(flaw_core, m) {
       .def("load_fen", &Board::loadFEN)
       .def("to_fen", &Board::toFEN)
       .def("make_move", &Board::makeMove)
-      .def("generate_moves", &Board::getPseudoLegalMoves)
+      .def("generate_moves",
+           [](const Board &b) { return MoveGen::generateLegalMoves(b); })
       .def("is_game_over", &Board::isGameOver)
       .def("get_result", &Board::getResult)
       .def("piece_at", &Board::pieceAt)

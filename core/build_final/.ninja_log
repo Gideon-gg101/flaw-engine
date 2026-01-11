@@ -1,0 +1,7 @@
+# ninja log v7
+47	4323	7898056568239987	CMakeFiles/flaw_core.dir/evaluator.cpp.obj	a48760d8d036113f
+33	4470	7898056568091594	CMakeFiles/flaw_core.dir/movegen.cpp.obj	cc3c991bca23d7cf
+21	6085	7898056567970628	CMakeFiles/flaw_core.dir/board.cpp.obj	4ebc13e5e33353ec
+62	6417	7898056568397428	CMakeFiles/flaw_core.dir/dis.cpp.obj	7b145e7ba1e8ff10
+10	22613	7898056567846993	CMakeFiles/flaw_core.dir/flaw_core.cpp.obj	fd88fbba56479163
+22616	23641	7898056793913520	flaw_core.cp312-win_amd64.pyd	de815957cbc67d1d

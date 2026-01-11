@@ -1,5 +1,0 @@
-C:/Users/Administrator/Desktop/Chess2.0/Engines2.0/flaw/core/build_debug/CMakeFiles/flaw_core.dir
-C:/Users/Administrator/Desktop/Chess2.0/Engines2.0/flaw/core/build_debug/CMakeFiles/edit_cache.dir
-C:/Users/Administrator/Desktop/Chess2.0/Engines2.0/flaw/core/build_debug/CMakeFiles/rebuild_cache.dir
-C:/Users/Administrator/Desktop/Chess2.0/Engines2.0/flaw/core/build_debug/_deps/pybind11-build/CMakeFiles/edit_cache.dir
-C:/Users/Administrator/Desktop/Chess2.0/Engines2.0/flaw/core/build_debug/_deps/pybind11-build/CMakeFiles/rebuild_cache.dir

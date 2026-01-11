@@ -1,7 +1,0 @@
-# ninja log v7
-48	2130	7898070557747007	CMakeFiles/flaw_core.dir/evaluator.cpp.obj	6febfb295a186c63
-38	2238	7898070557622459	CMakeFiles/flaw_core.dir/movegen.cpp.obj	6b8ecbf79ff98fe3
-30	3234	7898070557532691	CMakeFiles/flaw_core.dir/board.cpp.obj	c8b456499fb0cb9d
-61	4709	7898070557859797	CMakeFiles/flaw_core.dir/dis.cpp.obj	3dd2e9807a37bb7e
-15	29251	7898070557394104	CMakeFiles/flaw_core.dir/flaw_core.cpp.obj	22c7db44d6f323ce
-29260	30729	7898070849832748	flaw_core.cp313-win_amd64.pyd	acbf02c4c1d7aa6

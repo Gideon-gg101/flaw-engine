@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(flaw_core)
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Python 3.13 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
 
 include(FetchContent)
 FetchContent_Declare(

@@ -63,9 +63,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.event.inputs.worker_type }}" == "mcts" ]; then
-            timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.mcts_worker --master "${{ github.event.inputs.master_url }}" --duration ${{ github.event.inputs.duration_minutes }} || true
+            timeout ${{ github.event.inputs.duration_minutes }}m python3 -u -m ai.mcts_worker --master "${{ github.event.inputs.master_url }}" --duration ${{ github.event.inputs.duration_minutes }} || true
           else
-            timeout ${{ github.event.inputs.duration_minutes }}m python3 -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
+            timeout ${{ github.event.inputs.duration_minutes }}m python3 -u -m ai.selfplay_worker --master "${{ github.event.inputs.master_url }}" || true
           fi
 
       - name: Upload Training Results

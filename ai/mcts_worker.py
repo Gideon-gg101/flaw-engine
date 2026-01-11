@@ -1,3 +1,5 @@
+import sys
+print("Starting mcts_worker.py...", flush=True)
 import requests
 import os
 import time
